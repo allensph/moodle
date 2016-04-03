@@ -140,7 +140,37 @@ if ($frm and isset($frm->username)) {                             // Login WITH 
         $user = false;    /// Can't log in as guest if guest button is disabled
         $frm = false;
     } else {
-        if (empty($errormsg)) {
+        
+        //Add: Google reCaptcha
+        $secretKey = ""; /// Your secret key
+
+        $url = "https://www.google.com/recaptcha/api/siteverify";
+
+        $fields = array(
+            'secret'    => $secretKey,
+            'response'  => $frm->{'g-recaptcha-response'}
+        );
+
+        //Altered default http_build_query behavior
+        $postvars = http_build_query($fields,'','&');
+
+        $ch = curl_init();
+
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_POST, count($fields));
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $postvars);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER,1);
+
+        $curl_ack = curl_exec($ch);
+        curl_close($ch);
+
+        $results = json_decode($curl_ack);
+        //End: Google reCaptcha
+
+        if( !$results->success ) {
+            $user = false;
+        } else if (empty($errormsg)) {
             $user = authenticate_user_login($frm->username, $frm->password, false, $errorcode);
         }
     }
